@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <thread>
 #include <cmath>
+#include <fcntl.h>
 
 #define BUFFSIZE 1024
 class Stack
@@ -36,6 +37,8 @@ int pId, portNo;
 socklen_t len; // store size of the address
 struct sockaddr_in svrAdd, clntAdd;
 std::vector<pthread_t> threadB;
+struct flock fl = {F_WRLCK, SEEK_SET, 0, 0, 0};
+int fd;
 /**
  * @brief create a new element at the top of the stack.
  *

@@ -1,5 +1,6 @@
 #include "server.hpp"
-#include "malloc.h"
+// #include "malloc.h"
+#include <fcntl.h>
 #define em 5
 
 /**
@@ -59,7 +60,7 @@ void sig_handler(int signum)
 Stack *newNode(char *data)
 {
     Stack *stack = new Stack();
-    stack->data = strcpy((char *)_malloc(BUFFSIZE), data);
+    stack->data = strcpy((char *)malloc(BUFFSIZE), data);
     stack->next = NULL;
     return stack;
 }
@@ -75,18 +76,36 @@ Stack *pop(Stack **root)
     {
         return NULL;
     }
+    if(fcntl(fd, F_SETLKW, &fl) == -1){
+        perror("pop fcntl");
+        exit(1);
+    }
     Stack *temp = *root;
     *root = (*root)->next;
+    fl.l_type = F_UNLCK;
+    if (fcntl(fd, F_SETLK, &fl) == -1) {
+        perror("fcntl");
+        exit(1);
+    }
     size--;
     return temp;
 }
 
 void push(Stack **root, char *data)
 {
+    if(fcntl(fd, F_SETLKW, &fl) == -1){
+        perror("push fcntl");
+        exit(1);
+    }
     size++;
     Stack *Stack = newNode(data);
     Stack->next = *root;
     *root = Stack;
+    fl.l_type = F_UNLCK;
+    if (fcntl(fd, F_SETLK, &fl) == -1) {
+        perror("fcntl");
+        exit(1);
+    }
 }
 
 char *top(Stack *root)
@@ -96,7 +115,16 @@ char *top(Stack *root)
     {
         return NULL;
     }
+    if(fcntl(fd, F_SETLKW, &fl) == -1){
+        perror("push fcntl");
+        exit(1);
+    }
     s = root->data;
+    fl.l_type = F_UNLCK;
+    if (fcntl(fd, F_SETLK, &fl) == -1) {
+        perror("fcntl");
+        exit(1);
+    }
     return s;
 }
 
@@ -152,4 +180,96 @@ int server(int argc, char *argv[]){
         return 0;
     }
     return 1;
+}
+
+int main(int argc, char *argv[]){
+    red();
+    welcome();
+    reset();
+    signal(SIGINT, sig_handler);
+    signal(SIGQUIT, sig_handler);
+
+    if(!server(argc, argv))
+        return 0;
+
+    while(noThread < 100){
+        std::cout << "Listening" << std::endl;
+        socklen_t len = sizeof(clntAdd);
+        // this is where client connects. svr will hang in this mode until client conn
+        int connFd = accept(listenFd, (struct sockaddr *)&clntAdd, &len);
+
+        if (connFd < 0)
+        {
+            std::cerr << "Cannot accept connection" << std::endl;
+            return 0;
+        }
+        else
+        {
+            std::cout << "Connection successful" << std::endl;
+        }
+
+        int error = fcntl(fd, F_SETLK, &fl);
+        if(errno == -1){
+            printf("Lock can't be created :[%s]", strerror(error));
+        }
+        noThread++;
+    }
+
+    if(size != 0)
+        free(&my_stack);
+}
+
+int task1(int argc, char *argv[]){
+    int sock = 0;
+
+    while(true){
+        char *writer = 0;
+        char reader[BUFFSIZE] = {0};
+        bzero(reader, BUFFSIZE);
+        if(read(sock, reader, BUFFSIZE) == -1)
+            puts("error");
+        
+        if(strncmp(reader, "PUSH", 4) == 0){
+            puts("Pushed");
+            puts("Trying to get lock..\n");
+            if(fcntl(fd, F_SETLKW, &fl) == -1){
+                perror("first fcntl");
+                exit(1);
+            }
+            puts("Lock was set\n");
+            push(&my_stack, reader + 5);
+            send(sock, "Pushed", 6, 0);
+            fl.l_type = F_UNLCK;    // set to unlock same region
+            if (fcntl(fd, F_SETLK, &fl) == -1) {
+                perror("fcntl");
+                exit(1);
+            }
+            puts("Unlocked\n");
+        }
+
+        else if(strncmp(reader, "POP", 3) == 0){
+            Stack *temp = pop(&my_stack);
+            write(sock, (temp != NULL) ? temp->data : "Empty", (temp != NULL) ? sizeof(temp->data) : em);
+            if(temp != NULL){
+                free(temp->data);
+                delete temp;
+            }
+        }
+
+        else if(strncmp(reader, "TOP", 3) == 0){
+            writer = top(my_stack);
+            write(sock, (writer != NULL) ? writer : "Empty", (writer != NULL) ? sizeof(writer) : em);
+        }
+        else if(strncmp(reader, "EXIT", 4) == 0){
+            write(sock, "success", 4);
+            close(sock);
+            close(fd);
+            std::cout << "\n Closing connection and the lock" << std::endl;
+            break;
+        }
+        else{
+            write(sock, "(-1)", 4);
+        }
+    }
+    return 0;
 }
