@@ -128,7 +128,7 @@ char *top(Stack *);
  * If yes -> dealing with the input in the needed way
  * @return void* 
  */
-void *task1(void *);
+int task1();
 
 /**
  * @brief Initiallize the server side

@@ -36,6 +36,33 @@ void reset()
     printf("\033[0m");
 }
 
+void free_stack(Stack **root)
+{
+    fd = open("file.txt", O_WRONLY);
+    // locking
+    if(fcntl(fd, F_SETLKW, &fl) == -1){
+        perror("fcntl");
+        exit(1);
+    }
+    while (*root)
+    {
+        Stack *temp = *root;
+        *root = (*root)->next;
+        free(temp->data);
+        delete temp;
+    }
+
+    *root = NULL;
+    // unlocking
+    fl.l_type = F_UNLCK;
+    if(fcntl(fd, F_SETLKW, &fl) == -1){
+        perror("fcntl");
+        exit(1);
+    }
+    close(fd);
+    std::cout << "free all allocate" << std::endl;
+}
+
 void sig_handler(int signum)
 {
     free_stack(&my_stack);
@@ -79,14 +106,14 @@ Stack *pop(Stack **root)
     fd = open("file.txt", O_WRONLY);
     // locking
     if(fcntl(fd, F_SETLKW, &fl) == -1){
-        perror("pop fcntl");
+        perror("fcntl");
         exit(1);
     }
     Stack *temp = *root;
     *root = (*root)->next;
     // unlocking
     fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLK, &fl) == -1) {
+    if (fcntl(fd, F_SETLKW, &fl) == -1) {
         perror("fcntl");
         exit(1);
     }
@@ -97,10 +124,10 @@ Stack *pop(Stack **root)
 
 void push(Stack **root, char *data)
 {
-    fd - open("file.txt", O_WRONLY);
+    fd = open("file.txt", O_WRONLY);
     // locking
     if(fcntl(fd, F_SETLKW, &fl) == -1){
-        perror("push fcntl");
+        perror("fcntl");
         exit(1);
     }
     size++;
@@ -109,7 +136,7 @@ void push(Stack **root, char *data)
     *root = Stack;
     // unlocking
     fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLK, &fl) == -1) {
+    if (fcntl(fd, F_SETLKW, &fl) == -1) {
         perror("fcntl");
         exit(1);
     }
@@ -126,13 +153,13 @@ char *top(Stack *root)
     fd = open("file.txt", O_WRONLY);
     // locking
     if(fcntl(fd, F_SETLKW, &fl) == -1){
-        perror("push fcntl");
+        perror("fcntl");
         exit(1);
     }
     s = root->data;
     // unlocking
     fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLK, &fl) == -1) {
+    if (fcntl(fd, F_SETLKW, &fl) == -1) {
         perror("fcntl");
         exit(1);
     }
@@ -220,18 +247,20 @@ int main(int argc, char *argv[]){
             std::cout << "Connection successful" << std::endl;
         }
 
-        int error = fcntl(fd, F_SETLK, &fl);
-        if(errno == -1){
-            printf("Lock can't be created :[%s]", strerror(error));
-        }
+        // int error = fcntl(fd, F_SETLK, &fl);
+        // if(errno == -1){
+        //     printf("Lock can't be created :[%s]", strerror(error));
+        // }
+        task1();
         noThread++;
     }
 
     if(size != 0)
-        free(&my_stack);
+        free(my_stack);
 }
 
-int task1(int argc, char *argv[]){
+int task1(){
+    // need to figure
     int sock = 0;
 
     while(true){
@@ -242,6 +271,7 @@ int task1(int argc, char *argv[]){
             puts("error");
         
         if(strncmp(reader, "PUSH", 4) == 0){
+            puts("Pushed");
             push(&my_stack, reader + 5);
             send(sock, "Pushed", 6, 0);
         }
