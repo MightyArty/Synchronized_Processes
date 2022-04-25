@@ -76,23 +76,29 @@ Stack *pop(Stack **root)
     {
         return NULL;
     }
+    fd = open("file.txt", O_WRONLY);
+    // locking
     if(fcntl(fd, F_SETLKW, &fl) == -1){
         perror("pop fcntl");
         exit(1);
     }
     Stack *temp = *root;
     *root = (*root)->next;
+    // unlocking
     fl.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLK, &fl) == -1) {
         perror("fcntl");
         exit(1);
     }
+    close(fd);
     size--;
     return temp;
 }
 
 void push(Stack **root, char *data)
 {
+    fd - open("file.txt", O_WRONLY);
+    // locking
     if(fcntl(fd, F_SETLKW, &fl) == -1){
         perror("push fcntl");
         exit(1);
@@ -101,11 +107,13 @@ void push(Stack **root, char *data)
     Stack *Stack = newNode(data);
     Stack->next = *root;
     *root = Stack;
+    // unlocking
     fl.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLK, &fl) == -1) {
         perror("fcntl");
         exit(1);
     }
+    close(fd);
 }
 
 char *top(Stack *root)
@@ -115,16 +123,20 @@ char *top(Stack *root)
     {
         return NULL;
     }
+    fd = open("file.txt", O_WRONLY);
+    // locking
     if(fcntl(fd, F_SETLKW, &fl) == -1){
         perror("push fcntl");
         exit(1);
     }
     s = root->data;
+    // unlocking
     fl.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLK, &fl) == -1) {
         perror("fcntl");
         exit(1);
     }
+    close(fd);
     return s;
 }
 
@@ -230,21 +242,8 @@ int task1(int argc, char *argv[]){
             puts("error");
         
         if(strncmp(reader, "PUSH", 4) == 0){
-            puts("Pushed");
-            puts("Trying to get lock..\n");
-            if(fcntl(fd, F_SETLKW, &fl) == -1){
-                perror("first fcntl");
-                exit(1);
-            }
-            puts("Lock was set\n");
             push(&my_stack, reader + 5);
             send(sock, "Pushed", 6, 0);
-            fl.l_type = F_UNLCK;    // set to unlock same region
-            if (fcntl(fd, F_SETLK, &fl) == -1) {
-                perror("fcntl");
-                exit(1);
-            }
-            puts("Unlocked\n");
         }
 
         else if(strncmp(reader, "POP", 3) == 0){
@@ -263,7 +262,6 @@ int task1(int argc, char *argv[]){
         else if(strncmp(reader, "EXIT", 4) == 0){
             write(sock, "success", 4);
             close(sock);
-            close(fd);
             std::cout << "\n Closing connection and the lock" << std::endl;
             break;
         }
