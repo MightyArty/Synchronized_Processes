@@ -18,6 +18,7 @@
 #include <thread>
 #include <cmath>
 #include <fcntl.h>
+#include <sys/mman.h>
 
 #define BUFFSIZE 1024
 class Stack

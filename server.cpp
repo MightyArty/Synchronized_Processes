@@ -130,6 +130,7 @@ void push(Stack **root, char *data)
         perror("fcntl");
         exit(1);
     }
+    printf("im here");
     size++;
     Stack *Stack = newNode(data);
     Stack->next = *root;
@@ -140,6 +141,7 @@ void push(Stack **root, char *data)
         perror("fcntl");
         exit(1);
     }
+    printf("im here too");
     close(fd);
 }
 
@@ -166,6 +168,8 @@ char *top(Stack *root)
     close(fd);
     return s;
 }
+
+Stack *root;
 
 int server(int argc, char *argv[]){
     if (argc >= 2)
@@ -228,6 +232,9 @@ int main(int argc, char *argv[]){
     signal(SIGINT, sig_handler);
     signal(SIGQUIT, sig_handler);
 
+    // need to fix
+    // root = mmap(0, sizeof(my_stack), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED | MAP_ANON, -1, 0);
+
     if(!server(argc, argv))
         return 0;
 
@@ -251,7 +258,7 @@ int main(int argc, char *argv[]){
         // if(errno == -1){
         //     printf("Lock can't be created :[%s]", strerror(error));
         // }
-        task1();
+        // task1();
         noThread++;
     }
 
@@ -259,9 +266,9 @@ int main(int argc, char *argv[]){
         free(my_stack);
 }
 
-int task1(){
+void *task1(void *dummyPt){
     // need to figure
-    int sock = 0;
+    int sock = *((int*)dummyPt);
 
     while(true){
         char *writer = 0;
