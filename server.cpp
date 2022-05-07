@@ -1,7 +1,4 @@
 #include "server.hpp"
-// #include "malloc.h"
-#include <fcntl.h>
-#define em 5
 
 /**
  * @brief The functions welcome,red,yellow,blue,green and reset are just for fun
@@ -40,7 +37,8 @@ void free_stack(Stack **root)
 {
     fd = open("file.txt", O_WRONLY);
     // locking
-    if(fcntl(fd, F_SETLKW, &fl) == -1){
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
@@ -55,7 +53,8 @@ void free_stack(Stack **root)
     *root = NULL;
     // unlocking
     fl.l_type = F_UNLCK;
-    if(fcntl(fd, F_SETLKW, &fl) == -1){
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
@@ -105,7 +104,8 @@ Stack *pop(Stack **root)
     }
     fd = open("file.txt", O_WRONLY);
     // locking
-    if(fcntl(fd, F_SETLKW, &fl) == -1){
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
@@ -113,7 +113,8 @@ Stack *pop(Stack **root)
     *root = (*root)->next;
     // unlocking
     fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLKW, &fl) == -1) {
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
@@ -126,7 +127,8 @@ void push(Stack **root, char *data)
 {
     fd = open("file.txt", O_WRONLY);
     // locking
-    if(fcntl(fd, F_SETLKW, &fl) == -1){
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
@@ -137,11 +139,12 @@ void push(Stack **root, char *data)
     *root = Stack;
     // unlocking
     fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLKW, &fl) == -1) {
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
-    printf("im here too");
+    printf("im here too ");
     close(fd);
 }
 
@@ -154,14 +157,16 @@ char *top(Stack *root)
     }
     fd = open("file.txt", O_WRONLY);
     // locking
-    if(fcntl(fd, F_SETLKW, &fl) == -1){
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
     s = root->data;
     // unlocking
     fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLKW, &fl) == -1) {
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
         perror("fcntl");
         exit(1);
     }
@@ -169,9 +174,8 @@ char *top(Stack *root)
     return s;
 }
 
-Stack *root;
-
-int server(int argc, char *argv[]){
+int server(int argc, char *argv[])
+{
     if (argc >= 2)
     {
         try
@@ -217,7 +221,7 @@ int server(int argc, char *argv[]){
         return 0;
     }
 
-    if (listen(listenFd, 5) == -1)
+    if (listen(listenFd, 100) == -1)
     {
         printf("\n listen has failed\n");
         return 0;
@@ -225,7 +229,8 @@ int server(int argc, char *argv[]){
     return 1;
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[])
+{
     red();
     welcome();
     reset();
@@ -235,15 +240,16 @@ int main(int argc, char *argv[]){
     // need to fix
     // root = mmap(0, sizeof(my_stack), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED | MAP_ANON, -1, 0);
 
-    if(!server(argc, argv))
+    if (!server(argc, argv))
         return 0;
-
-    while(noThread < 100){
+    int i = 0;
+    while (1)
+    {
         std::cout << "Listening" << std::endl;
-        socklen_t len = sizeof(clntAdd);
+        addr_size = sizeof(serverStorage);
         // this is where client connects. svr will hang in this mode until client conn
-        int connFd = accept(listenFd, (struct sockaddr *)&clntAdd, &len);
-
+        int connFd = accept(listenFd, (struct sockaddr *)&serverStorage, &addr_size);
+        int pid_c = 0;
         if (connFd < 0)
         {
             std::cerr << "Cannot accept connection" << std::endl;
@@ -253,58 +259,109 @@ int main(int argc, char *argv[]){
         {
             std::cout << "Connection successful" << std::endl;
         }
+        pid_c = fork();
+        if (pid_c)
+        {
+            printf("if inside\n");
+            printf("if %d", getpid());
+            socketThread(connFd);
+            exit(0);
+        }
+        else
+        {
+            printf("else inside\n");
+            printf("else %d", getpid());
 
-        // int error = fcntl(fd, F_SETLK, &fl);
-        // if(errno == -1){
-        //     printf("Lock can't be created :[%s]", strerror(error));
-        // }
-        // task1();
-        noThread++;
+            pid_thr[i++] = pid_c;
+            if (i >= 49)
+            {
+                i = 0;
+                while (i < 50)
+                    waitpid(pid_thr[i++], NULL, 0);
+                i = 0;
+            }
+        }
+        pid_c++;
     }
-
-    if(size != 0)
-        free(my_stack);
+    if (size != 0)
+        free_stack(&my_stack);
 }
 
-void *task1(void *dummyPt){
-    // need to figure
-    int sock = *((int*)dummyPt);
+void socketThread(int clientSocket)
+{
+    int sock = clientSocket;
+    printf("inside\n");
+    printf("socketThread %d", getpid());
 
-    while(true){
+    std::cout << &my_stack << std::endl;
+    while (true)
+    {
         char *writer = 0;
         char reader[BUFFSIZE] = {0};
         bzero(reader, BUFFSIZE);
-        if(read(sock, reader, BUFFSIZE) == -1)
+
+        if (read(sock, reader, BUFFSIZE) == -1)
             puts("error");
-        
-        if(strncmp(reader, "PUSH", 4) == 0){
+
+        if (strncmp(reader, "PUSH", 4) == 0)
+        {
             puts("Pushed");
             push(&my_stack, reader + 5);
             send(sock, "Pushed", 6, 0);
         }
 
-        else if(strncmp(reader, "POP", 3) == 0){
+        else if (strncmp(reader, "POP", 3) == 0)
+        {
             Stack *temp = pop(&my_stack);
             write(sock, (temp != NULL) ? temp->data : "Empty", (temp != NULL) ? sizeof(temp->data) : em);
-            if(temp != NULL){
+            if (temp != NULL)
+            {
                 free(temp->data);
                 delete temp;
             }
         }
+        else if (strncmp(reader, "COUNT", 5) == 0)
+        {
+            int number = size;
+            char numberArray[10] = {0};
+            if (size != 0)
+            {
+                for (int n = log10(size) + 1, i = n - 1; i >= 0; --i, number /= 10)
+                {
+                    numberArray[i] = (number % 10) + '0';
+                }
+                write(sock, numberArray, 10);
+            }
+            else
+            {
+                write(sock, "0", 1);
+            }
+        }
+        else if (strncmp(reader, "CLEAN", 5) == 0)
+        {
+            if (size != 0)
+            {
+                free_stack(&my_stack);
+            }
+            write(sock, "Clean stack succeeded", 21);
+        }
 
-        else if(strncmp(reader, "TOP", 3) == 0){
+        else if (strncmp(reader, "TOP", 3) == 0)
+        {
             writer = top(my_stack);
             write(sock, (writer != NULL) ? writer : "Empty", (writer != NULL) ? sizeof(writer) : em);
         }
-        else if(strncmp(reader, "EXIT", 4) == 0){
+        else if (strncmp(reader, "EXIT", 4) == 0)
+        {
             write(sock, "success", 4);
             close(sock);
             std::cout << "\n Closing connection and the lock" << std::endl;
             break;
         }
-        else{
+        else
+        {
             write(sock, "(-1)", 4);
         }
     }
-    return 0;
+    return;
 }

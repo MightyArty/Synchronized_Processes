@@ -13,31 +13,45 @@
 #include <vector>
 #include <pthread.h>
 #include <signal.h>
-// #include <bits/stdc++.h>
 #include <cstdlib>
 #include <thread>
+#define em 5
+#include "malloc.h"
+#include <fcntl.h>
+#include <threads.h>
 #include <cmath>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<string.h>
+#include <arpa/inet.h>
+#include <fcntl.h> // for open
+#include <unistd.h> // for close
+#include <sys/types.h>
 
 #define BUFFSIZE 1024
 class Stack
 {
 public:
-    char *data;
-    Stack *next;
+   char *data;
+   Stack *next;
 };
 int size = 0;
 int listenFd;
-int noThread = 0;
+
 int count = 0;
-pthread_mutex_t lock;
 Stack *my_stack;
-pthread_t threadA[100];
 int pId, portNo;
 socklen_t len; // store size of the address
 struct sockaddr_in svrAdd, clntAdd;
-std::vector<pthread_t> threadB;
+struct sockaddr_storage serverStorage;
+socklen_t addr_size;
+pid_t pid_thr[100];
 struct flock fl = {F_WRLCK, SEEK_SET, 0, 0, 0};
 int fd;
 /**
@@ -127,10 +141,9 @@ char *top(Stack *);
  * Checking if the input is valid
  * If no -> throiwng an error
  * If yes -> dealing with the input in the needed way
- * @return void* 
+ * @return void*
  */
-int task1();
-
+void socketThread(int clientSocket);
 /**
  * @brief Initiallize the server side
  * @return int = 1 on success, 0 on failure

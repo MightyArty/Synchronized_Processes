@@ -48,9 +48,9 @@ void sig_handler(int signum)
         reset();
         close(sockFd);
         cout << "Closing socket" << endl;
+        exit(1);
     }
 }
-
 int client(int argc, char *argv[])
 {
     red();
@@ -114,7 +114,6 @@ int client(int argc, char *argv[])
     }
     return 1;
 }
-
 int main(int argc, char *argv[])
 {
     welcom();
