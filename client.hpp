@@ -17,6 +17,7 @@
 #include <time.h>
 #include <vector>
 #define BUFFSIZE 1024
+#define PORT 30090
 using namespace std;
 char wirter[BUFFSIZE];
 char reader[BUFFSIZE];

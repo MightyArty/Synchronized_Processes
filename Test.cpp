@@ -2,7 +2,7 @@
 #include "server.hpp"
 #include "client.hpp"
 #include <pthread.h>
-#define PORT 30073
+#define PORT 30090
 #include <iostream>
 using namespace std;
 #define BUFFSIZE 1024

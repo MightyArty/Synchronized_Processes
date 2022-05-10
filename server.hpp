@@ -21,7 +21,13 @@
 #include <stdbool.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-
+#define em 5
+#define PORT 30090
+#define MAX_STACK 40000
+#define MAX_PORT 65535
+#define MIN_PORT 2000
+#define ARG_N 2
+#define MAX_CLIENT 50
 #define BUFFSIZE 1024
 typedef struct Stack
 {
@@ -64,6 +70,26 @@ void red();
  * @return none.
  */
 void yellow();
+/**
+ * @brief Colloring the text in yellow color
+ * just for fun :)
+ * @return none.
+ */
+void yellow();
+
+/**
+ * @brief Colloring the text in yellow color
+ * just for fun :)
+ * @return none.
+ */
+void green();
+
+/**
+ * @brief Colloring the text in yellow color
+ * just for fun :)
+ * @return none.
+ */
+void blue();
 /**
  * @brief Reseting the text color back to default
  * just for fun :)

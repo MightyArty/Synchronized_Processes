@@ -1,5 +1,4 @@
 #include "client.hpp"
-#define PORT 30073
 
 void red()
 {

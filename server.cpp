@@ -1,20 +1,4 @@
 #include "server.hpp"
-
-#define em 5
-#define PORT 30073
-#define MAX_STACK 40000
-/**
- * @brief The functions welcome,red,yellow,blue,green and reset are just for fun
- * We want you to enjoy the proccess :)
- */
-void welcome()
-{
-    printf("\033[1;31m    $$      $$$$$  $$$$$$$$$ $     $         \033[1;34m $$$$$         $$     $$$$$       $$      $  $    \n");
-    printf("\033[1;31m   $  $     $   $      $      $   $          \033[1;34m $   $        $  $    $   $      $  $     $ $    \n");
-    printf("\033[1;31m  $ -- $    $$$$$      $        $    \033[1;33m @@@@@@ \033[1;34m $$$$$$$     $ -- $   $$$$$     $ -- $    $$        \n");
-    printf("\033[1;31m $      $   $    $     $        $            \033[1;34m $     $    $      $  $    $   $      $   $ $         \n");
-    printf("\033[1;31m$        $  $     $    $        $            \033[1;34m $$$$$$$   $        $ $     $ $        $  $  $       \n");
-}
 void red()
 {
     printf("\033[1;31m");
@@ -35,10 +19,40 @@ void reset()
 {
     printf("\033[0m");
 }
+/**
+ * @brief The functions welcome,red,yellow,blue,green and reset are just for fun
+ * We want you to enjoy the proccess :)
+ */
+void welcome()
+{
+    red();
+    printf("    $$      $$$$$  $$$$$$$$$ $     $         ");
+    blue();
+    printf(" $$$$$         $$     $$$$$       $$      $  $    \n");
+    red();
+    printf("   $  $     $   $      $      $   $          ");
+    blue();
+    printf(" $   $        $  $    $   $      $  $     $ $    \n");
+    red();
+    printf("  $ -- $    $$$$$      $        $    ");
+    yellow();
+    printf(" @@@@@@ ");
+    blue();
+    printf(" $$$$$$$     $ -- $   $$$$$     $ -- $    $$        \n");
+    red();
+    printf(" $      $   $    $     $        $            ");
+    blue();
+    printf(" $     $    $      $  $    $   $      $   $ $         \n");
+    red();
+    printf("$        $  $     $    $        $            ");
+    blue();
+    printf(" $$$$$$$   $        $ $     $ $        $  $  $       \n");
+}
+
 void free_stack(struct info_Stack **info_mmap)
 {
 
-    while ((*info_mmap)->head_address)
+    while ((*info_mmap)->head_address != NULL)
     {
         Stack *temp = (*info_mmap)->head_address;
         (*info_mmap)->head_address = (*info_mmap)->head_address->next;
@@ -67,13 +81,13 @@ void sig_handler(int signum)
     default:
         close(listenFd);
         std::cout << "Closing Server" << std::endl;
-        kill(getpid(), SIGTSTP);
+        kill(getppid(), SIGTSTP);
         exit(1);
     }
 }
 int isEmpty(struct info_Stack **info_mmap)
 {
-    return !(*info_mmap)->head_address;
+    return (*info_mmap)->head_address == NULL;
 }
 Stack *pop(info_Stack **mmap_info)
 {
@@ -110,7 +124,6 @@ void push(info_Stack **mmap_info, char *data)
         perror("fcntl");
         exit(1);
     }
-    int n = (*(*mmap_info)->size);
     if ((*mmap_info)->head_address == NULL)
     {
         (*mmap_info)->head_address = (*mmap_info)->mmap_address;
@@ -161,12 +174,12 @@ char *top(struct info_Stack **info)
 int server(int argc, char *argv[])
 {
 
-    if (argc >= 2)
+    if (argc >= ARG_N)
     {
         try
         {
             portNo = atoi(argv[1]);
-            if ((portNo > 65535) || (portNo < 2000))
+            if ((portNo > MAX_PORT) || (portNo < MIN_PORT))
             {
                 throw std::invalid_argument("Please enter a port number between 2000 - 65535");
             }
@@ -206,7 +219,7 @@ int server(int argc, char *argv[])
         return 0;
     }
 
-    if (listen(listenFd, 5) == -1)
+    if (listen(listenFd, MAX_CLIENT) == -1)
     {
         printf("\n listen has failed\n");
         return 0;
@@ -223,7 +236,9 @@ int main(int argc, char *argv[])
     signal(SIGTSTP, sig_handler);
     signal(SIGQUIT, sig_handler);
     if (!server(argc, argv))
+    {
         return 0;
+    }
 
     struct info_Stack *mmap_info = (struct info_Stack *)mmap(NULL, sizeof(struct info_Stack *), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     mmap_info->mmap_address = (struct Stack *)mmap(NULL, MAX_STACK * sizeof(struct Stack) + 1, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -234,16 +249,23 @@ int main(int argc, char *argv[])
     int i = 0;
     pid_t pid[50];
     int pid_c = 0;
+    int count = 0;
+    char ch;
     while (1)
     {
+        count++;
+        if (count == 4)
+        {
+            break;
+        }
         std::cout << "Listening" << std::endl;
         len = sizeof(clntAdd);
         // this is where client connects. svr will hang in this mode until client conn
         int connFd = accept(listenFd, (struct sockaddr *)&clntAdd, &len);
+
         if (connFd < 0)
         {
             std::cerr << "Cannot accept connection" << std::endl;
-            return 0;
         }
         else
         {
@@ -256,25 +278,36 @@ int main(int argc, char *argv[])
         else
         {
             pid[i++] = pid_c;
-            if (i >= 49)
+            if (i >= MAX_CLIENT - 1)
             {
                 i = 0;
-                while (i < 50)
+                while (i < MAX_CLIENT)
                     waitpid(pid[i++], NULL, 0);
                 i = 0;
             }
         }
     }
+    while (i < MAX_CLIENT)
+        waitpid(pid[i++], NULL, 0);
+    for (int i = 0; i < MAX_CLIENT; i++)
+    {
+        kill(pid[i], 0);
+    }
     if ((*mmap_info->size) != 0)
+    {
         free_stack(&mmap_info);
+    }
     puts("finish");
+    exit(1);
+    return 1;
 }
 void task1(int sock, pid_t process_pid, struct info_Stack **front)
 {
     while (true)
     {
         fd = open("file.txt", O_WRONLY | O_CREAT);
-        if(fd == -1){
+        if (fd == -1)
+        {
             printf("error in opening file\n");
             perror("file");
         }
@@ -288,7 +321,7 @@ void task1(int sock, pid_t process_pid, struct info_Stack **front)
         }
         if (strncmp(reader, "PUSH", 4) == 0)
         {
-            // puts("Pushed");
+            puts("Pushed");
             push(front, reader + 5);
             send(sock, "Pushed", 6, 0);
         }
@@ -356,6 +389,6 @@ void task1(int sock, pid_t process_pid, struct info_Stack **front)
             write(sock, "(-1)", 4);
         }
     }
-    kill(process_pid, SIGSEGV);
+    exit(1);
     return;
 }

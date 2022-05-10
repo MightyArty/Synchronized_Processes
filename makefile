@@ -31,11 +31,12 @@ test: TestCounter.o Test.o
 $(OBJECT_PATH)/%.o: $(SOURCE_PATH)/%.c*  $(HEADERS) 
 	$(CXX) $(CXXFLAGS) --compile $< -o $@
 
-tidy:
-	clang-tidy $(SOURCES) $(TIDY_FLAGS) --
+# tidy:
+# 	clang-tidy $(SOURCES) $(TIDY_FLAGS) --
 
-valgrind: server client
-	valgrind --tool=memcheck $(VALGRIND_FLAGS) ./server 
+
+valgrind: server client test
+	valgrind --tool=memcheck $(VALGRIND_FLAGS) ./test 
 
 clean:
 	rm -f $(OBJECTS) *.o client server test malloc *.a *.out
