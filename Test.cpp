@@ -2,11 +2,11 @@
 #include "server.hpp"
 #include "client.hpp"
 #include <pthread.h>
-
+#define PORT 30072
 #include <iostream>
 using namespace std;
-
 #define BUFFSIZE 1024
+pthread_t threadA[4];
 char r[BUFFSIZE] = {0};
 int c1;
 int c2;
@@ -46,7 +46,7 @@ int client()
 	struct sockaddr_in svrAdd;
 	struct hostent *server;
 
-	portNo = htons(3003);
+	portNo = htons(PORT);
 
 	if ((portNo > 65535) || (portNo < 2000))
 	{
@@ -95,9 +95,8 @@ void *MultiPush(void *dummyPt)
 {
 	char reader[BUFFSIZE] = {0};
 	int sock = *((int *)dummyPt);
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < 10000; i++)
 	{
-		bzero(reader, BUFFSIZE);
 		bzero(reader, BUFFSIZE);
 		write(sock, "PUSH c1", 7);
 		read(sock, reader, BUFFSIZE);
@@ -111,7 +110,7 @@ void *MultiPush(void *dummyPt)
  */
 TEST_CASE("Good Input")
 {
-	pthread_t threadA[4];
+	
 	int error = pthread_create(&threadA[0], NULL, server, NULL);
 	if (error != 0)
 		printf("\nThread can't be created :[%s]",
@@ -129,6 +128,7 @@ TEST_CASE("Good Input")
 		cout << "Inside PUSH case" << endl;
 		reset();
 		bzero(r, BUFFSIZE);
+		
 		write(c1, "PUSH c1", 7);
 		read(c1, r, BUFFSIZE);
 		CHECK(strcmp(r, "Pushed") == 0);
@@ -146,8 +146,11 @@ TEST_CASE("Good Input")
 		CHECK(strcmp(r, "3") == 0);
 
 		pthread_create(&threadA[1], NULL, MultiPush, (void *)&c1);
+		// pthread_join(threadA[1], NULL);
 		pthread_create(&threadA[2], NULL, MultiPush, (void *)&c2);
+		// pthread_join(threadA[2], NULL);
 		pthread_create(&threadA[3], NULL, MultiPush, (void *)&c3);
+		// pthread_join(threadA[3], NULL);
 	}
 	for (int i = 1; i < 4; i++)
 	{
@@ -155,7 +158,7 @@ TEST_CASE("Good Input")
 	}
 	write(c1, "COUNT", 5);
 	read(c1, r, BUFFSIZE);
-	CHECK(strcmp(r, "303") == 0);
+	CHECK(strcmp(r, "30003") == 0);
 }
 /**
  * @brief Test for poping out of the stack
@@ -175,7 +178,7 @@ TEST_CASE("Good Input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "304") == 0);
+		CHECK(strcmp(r, "30004") == 0);
 
 		write(c1, "POP", 3);
 		read(c1, r, BUFFSIZE);
@@ -183,7 +186,7 @@ TEST_CASE("Good Input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "303") == 0);
+		CHECK(strcmp(r, "30003") == 0);
 	}
 }
 /**
@@ -203,7 +206,7 @@ TEST_CASE("Good Input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "304") == 0);
+		CHECK(strcmp(r, "30004") == 0);
 
 		write(c1, "TOP", 3);
 		read(c1, r, BUFFSIZE);
@@ -211,7 +214,7 @@ TEST_CASE("Good Input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "304") == 0);
+		CHECK(strcmp(r, "30004") == 0);
 	}
 }
 /**
@@ -231,7 +234,7 @@ TEST_CASE("Good input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "304") == 0);
+		CHECK(strcmp(r, "30004") == 0);
 
 		write(c1, "PUSH c1", 7);
 		read(c1, r, BUFFSIZE);
@@ -239,7 +242,7 @@ TEST_CASE("Good input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "305") == 0);
+		CHECK(strcmp(r, "30005") == 0);
 
 		write(c1, "POP", 3);
 		read(c1, r, BUFFSIZE);
@@ -247,7 +250,7 @@ TEST_CASE("Good input")
 
 		write(c1, "COUNT", 5);
 		read(c1, r, BUFFSIZE);
-		CHECK(strcmp(r, "304") == 0);
+		CHECK(strcmp(r, "30004") == 0);
 	}
 }
 /**

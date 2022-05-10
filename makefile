@@ -12,19 +12,13 @@ KNOWN_TARGETS = target
 args := $(filter-out $(KNOWN_TARGETS),$(MAKECMDGOALS))
 
 # run: client server test
-run: client server  
+run: client server test 
 
 client:client.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-server:server.o libclass.a 
-	$(CXX) $(CXXFLAGS)  $^ -o  $@ -pthread 
-
-libclass.a:malloc.o
-	ar -rcs libclass.a malloc.o
-
-malloc.o:malloc.c malloc.h
-	$(CXX) $(CXXFLAGS) -c malloc.c 
+server:server.o 
+	$(CXX) $(CXXFLAGS)  $^ -o  $@ 
 
 
 test: TestCounter.o Test.o 

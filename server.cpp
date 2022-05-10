@@ -1,5 +1,8 @@
 #include "server.hpp"
 
+#define em 5
+#define PORT 30073
+#define MAX_STACK 40000
 /**
  * @brief The functions welcome,red,yellow,blue,green and reset are just for fun
  * We want you to enjoy the proccess :)
@@ -32,39 +35,23 @@ void reset()
 {
     printf("\033[0m");
 }
-
-void free_stack(Stack **root)
+void free_stack(struct info_Stack **info_mmap)
 {
-    fd = open("file.txt", O_WRONLY);
-    // locking
-    if (fcntl(fd, F_SETLKW, &fl) == -1)
-    {
-        perror("fcntl");
-        exit(1);
-    }
-    while (*root)
-    {
-        Stack *temp = *root;
-        *root = (*root)->next;
-        free(temp->data);
-        delete temp;
-    }
 
-    *root = NULL;
-    // unlocking
-    fl.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    while ((*info_mmap)->head_address)
     {
-        perror("fcntl");
-        exit(1);
+        Stack *temp = (*info_mmap)->head_address;
+        (*info_mmap)->head_address = (*info_mmap)->head_address->next;
+        munmap(temp, sizeof(Stack *));
     }
-    close(fd);
+    munmap((*info_mmap)->size, sizeof(int *));
+    munmap(*info_mmap, sizeof(struct info_Stack *));
+
     std::cout << "free all allocate" << std::endl;
 }
-
 void sig_handler(int signum)
 {
-    free_stack(&my_stack);
+    free_stack(&global_info);
     switch (signum)
     {
     case SIGTSTP:
@@ -80,38 +67,30 @@ void sig_handler(int signum)
     default:
         close(listenFd);
         std::cout << "Closing Server" << std::endl;
+        kill(getpid(), SIGTSTP);
+        exit(1);
     }
 }
-
-Stack *newNode(char *data)
+int isEmpty(struct info_Stack **info_mmap)
 {
-    Stack *stack = new Stack();
-    stack->data = strcpy((char *)malloc(BUFFSIZE), data);
-    stack->next = NULL;
-    return stack;
+    return !(*info_mmap)->head_address;
 }
-
-int isEmpty(Stack *root)
+Stack *pop(info_Stack **mmap_info)
 {
-    return !root;
-}
-
-Stack *pop(Stack **root)
-{
-    if (isEmpty(*root))
-    {
-        return NULL;
-    }
     fd = open("file.txt", O_WRONLY);
-    // locking
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
         perror("fcntl");
         exit(1);
     }
-    Stack *temp = *root;
-    *root = (*root)->next;
-    // unlocking
+    if ((*mmap_info)->head_address == NULL)
+    {
+        return NULL;
+    }
+
+    Stack *temp = (*mmap_info)->head_address;
+    (*mmap_info)->head_address = (*mmap_info)->head_address->next;
+    (*(*mmap_info)->size)--;
     fl.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
@@ -119,51 +98,55 @@ Stack *pop(Stack **root)
         exit(1);
     }
     close(fd);
-    size--;
     return temp;
 }
-
-void push(Stack **root, char *data)
+void push(info_Stack **mmap_info, char *data)
 {
     fd = open("file.txt", O_WRONLY);
-    // locking
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
         perror("fcntl");
         exit(1);
     }
-    printf("im here");
-    size++;
-    Stack *Stack = newNode(data);
-    Stack->next = *root;
-    *root = Stack;
-    // unlocking
+    int n = (*(*mmap_info)->size);
+    if ((*mmap_info)->head_address == NULL)
+    {
+        (*mmap_info)->head_address = (*mmap_info)->mmap_address;
+        strcpy((*mmap_info)->head_address->data, data);
+        (*mmap_info)->head_address->next = NULL;
+    }
+    else
+    {
+
+        Stack *temp = (*mmap_info)->head_address + 1;
+        strcpy(temp->data, data);
+        temp->next = (*mmap_info)->head_address;
+        (*mmap_info)->head_address = temp;
+    }
+
+    (*(*mmap_info)->size) += 1;
     fl.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
         perror("fcntl");
         exit(1);
     }
-    printf("im here too ");
     close(fd);
 }
-
-char *top(Stack *root)
+char *top(struct info_Stack **info)
 {
-    char *s;
-    if (isEmpty(root))
+    fd = open("file.txt", O_WRONLY);
+    if (fcntl(fd, F_SETLKW, &fl) == -1)
+    {
+        perror("fcntl");
+        exit(1);
+    }
+    if ((*(info))->head_address == NULL)
     {
         return NULL;
     }
-    fd = open("file.txt", O_WRONLY);
-    // locking
-    if (fcntl(fd, F_SETLKW, &fl) == -1)
-    {
-        perror("fcntl");
-        exit(1);
-    }
-    s = root->data;
-    // unlocking
+    struct Stack *temp = (*info)->head_address;
+    return temp->data;
     fl.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
@@ -171,11 +154,10 @@ char *top(Stack *root)
         exit(1);
     }
     close(fd);
-    return s;
 }
-
 int server(int argc, char *argv[])
 {
+
     if (argc >= 2)
     {
         try
@@ -189,13 +171,13 @@ int server(int argc, char *argv[])
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
-            portNo = htons(3000);
+            portNo = htons(PORT);
             std::cout << "Port :" << portNo << std::endl;
         }
     }
     else
     {
-        portNo = htons(3000);
+        portNo = htons(PORT);
         std::cout << "Port :" << portNo << std::endl;
     }
 
@@ -221,35 +203,40 @@ int server(int argc, char *argv[])
         return 0;
     }
 
-    if (listen(listenFd, 100) == -1)
+    if (listen(listenFd, 5) == -1)
     {
         printf("\n listen has failed\n");
         return 0;
     }
+
     return 1;
 }
-
 int main(int argc, char *argv[])
 {
     red();
     welcome();
     reset();
     signal(SIGINT, sig_handler);
+    signal(SIGTSTP, sig_handler);
     signal(SIGQUIT, sig_handler);
-
-    // need to fix
-    // root = mmap(0, sizeof(my_stack), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED | MAP_ANON, -1, 0);
-
     if (!server(argc, argv))
         return 0;
+
+    struct info_Stack *mmap_info = (struct info_Stack *)mmap(NULL, sizeof(struct info_Stack *), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    mmap_info->mmap_address = (struct Stack *)mmap(NULL, MAX_STACK * sizeof(struct Stack) + 1, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    mmap_info->size = (int *)mmap(NULL, sizeof(int *), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    (*mmap_info->size) = 0;
+    global_info = mmap_info;
+
     int i = 0;
+    pid_t pid[50];
+    int pid_c = 0;
     while (1)
     {
         std::cout << "Listening" << std::endl;
-        addr_size = sizeof(serverStorage);
+        len = sizeof(clntAdd);
         // this is where client connects. svr will hang in this mode until client conn
-        int connFd = accept(listenFd, (struct sockaddr *)&serverStorage, &addr_size);
-        int pid_c = 0;
+        int connFd = accept(listenFd, (struct sockaddr *)&clntAdd, &len);
         if (connFd < 0)
         {
             std::cerr << "Cannot accept connection" << std::endl;
@@ -259,74 +246,67 @@ int main(int argc, char *argv[])
         {
             std::cout << "Connection successful" << std::endl;
         }
-        pid_c = fork();
-        if (pid_c)
+        if ((pid_c = fork()) != 0)
         {
-            printf("if inside\n");
-            printf("if %d", getpid());
-            socketThread(connFd);
-            exit(0);
+            task1(connFd, getpid(), &mmap_info);
         }
         else
         {
-            printf("else inside\n");
-            printf("else %d", getpid());
-
-            pid_thr[i++] = pid_c;
+            pid[i++] = pid_c;
             if (i >= 49)
             {
                 i = 0;
                 while (i < 50)
-                    waitpid(pid_thr[i++], NULL, 0);
+                    waitpid(pid[i++], NULL, 0);
                 i = 0;
             }
         }
-        pid_c++;
     }
-    if (size != 0)
-        free_stack(&my_stack);
+    if ((*mmap_info->size) != 0)
+        free_stack(&mmap_info);
+    puts("finish");
 }
-
-void socketThread(int clientSocket)
+void task1(int sock, pid_t process_pid, struct info_Stack **front)
 {
-    int sock = clientSocket;
-    printf("inside\n");
-    printf("socketThread %d", getpid());
-
-    std::cout << &my_stack << std::endl;
     while (true)
     {
         char *writer = 0;
         char reader[BUFFSIZE] = {0};
         bzero(reader, BUFFSIZE);
-
         if (read(sock, reader, BUFFSIZE) == -1)
+        {
             puts("error");
-
+        }
         if (strncmp(reader, "PUSH", 4) == 0)
         {
-            puts("Pushed");
-            push(&my_stack, reader + 5);
+            // puts("Pushed");
+            push(front, reader + 5);
             send(sock, "Pushed", 6, 0);
         }
-
         else if (strncmp(reader, "POP", 3) == 0)
         {
-            Stack *temp = pop(&my_stack);
+            Stack *temp = pop(front);
             write(sock, (temp != NULL) ? temp->data : "Empty", (temp != NULL) ? sizeof(temp->data) : em);
-            if (temp != NULL)
-            {
-                free(temp->data);
-                delete temp;
-            }
+        }
+        else if (strncmp(reader, "TOP", 3) == 0)
+        {
+            writer = top(front);
+            write(sock, (writer != NULL) ? writer : "Empty", (writer != NULL) ? sizeof(writer) : em);
         }
         else if (strncmp(reader, "COUNT", 5) == 0)
         {
-            int number = size;
-            char numberArray[10] = {0};
-            if (size != 0)
+            fd = open("file.txt", O_WRONLY);
+            if (fcntl(fd, F_SETLKW, &fl) == -1)
             {
-                for (int n = log10(size) + 1, i = n - 1; i >= 0; --i, number /= 10)
+                perror("fcntl");
+                exit(1);
+            }
+            int number = *(*front)->size;
+            std::cout << number << std::endl;
+            char numberArray[10] = {0};
+            if (number != 0)
+            {
+                for (int n = log10(number) + 1, i = n - 1; i >= 0; --i, number /= 10)
                 {
                     numberArray[i] = (number % 10) + '0';
                 }
@@ -336,32 +316,36 @@ void socketThread(int clientSocket)
             {
                 write(sock, "0", 1);
             }
+            fl.l_type = F_UNLCK;
+            if (fcntl(fd, F_SETLKW, &fl) == -1)
+            {
+                perror("fcntl");
+                exit(1);
+            }
+            close(fd);
         }
         else if (strncmp(reader, "CLEAN", 5) == 0)
         {
-            if (size != 0)
-            {
-                free_stack(&my_stack);
-            }
+            (*front)->head_address = NULL;
             write(sock, "Clean stack succeeded", 21);
-        }
-
-        else if (strncmp(reader, "TOP", 3) == 0)
-        {
-            writer = top(my_stack);
-            write(sock, (writer != NULL) ? writer : "Empty", (writer != NULL) ? sizeof(writer) : em);
         }
         else if (strncmp(reader, "EXIT", 4) == 0)
         {
-            write(sock, "success", 4);
+            write(sock, "succ", 4);
             close(sock);
-            std::cout << "\n Closing connection and the lock" << std::endl;
+            std::cout << "\nClosing thread and connection" << std::endl;
             break;
+        }
+        else if (strncmp(reader, "FRONT", 4) == 0)
+        {
+            std::cout << "Front " << (*(front))->head_address << std::endl;
+            write(sock, "front", 5);
         }
         else
         {
             write(sock, "(-1)", 4);
         }
     }
+    kill(process_pid, SIGSEGV);
     return;
 }

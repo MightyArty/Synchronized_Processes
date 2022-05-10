@@ -1,4 +1,6 @@
 #include "client.hpp"
+#define PORT 30073
+
 void red()
 {
     printf("\033[1;31m");
@@ -48,7 +50,6 @@ void sig_handler(int signum)
         reset();
         close(sockFd);
         cout << "Closing socket" << endl;
-        exit(1);
     }
 }
 int client(int argc, char *argv[])
@@ -72,13 +73,13 @@ int client(int argc, char *argv[])
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
-            portNo = htons(3000);
+            portNo = htons(PORT);
             cout << "Port :" << portNo << endl;
         }
     }
     else
     {
-        portNo = htons(3000);
+        portNo = htons(PORT);
         cout << "Port :" << portNo << endl;
     }
 

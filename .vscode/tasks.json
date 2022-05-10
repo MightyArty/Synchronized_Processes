@@ -11,8 +11,6 @@
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
                 ,"-pthread"
-                ,"-lsocket"
-                ,"–lnsl"
             ],
             "options": {
                 "cwd": "${fileDirname}"

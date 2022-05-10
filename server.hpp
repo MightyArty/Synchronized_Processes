@@ -1,7 +1,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -10,67 +9,49 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <string>
-#include <vector>
-#include <pthread.h>
+#include <fcntl.h>
+#include <sys/unistd.h>
 #include <signal.h>
-#include <cstdlib>
-#include <thread>
-#define em 5
-#include "malloc.h"
-#include <fcntl.h>
-#include <threads.h>
 #include <cmath>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<string.h>
 #include <arpa/inet.h>
-#include <fcntl.h> // for open
-#include <unistd.h> // for close
-#include <sys/types.h>
+#include <netdb.h>
+#include <ostream>
+#include <cstdlib>
+#include <stdbool.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #define BUFFSIZE 1024
-class Stack
+typedef struct Stack
 {
-public:
-   char *data;
-   Stack *next;
-};
-int size = 0;
+   char data[BUFFSIZE];
+   struct Stack *next;
+} Stack;
+typedef struct info_Stack
+{
+   struct Stack *mmap_address;
+   struct Stack *head_address;
+   int *size;
+} info;
 int listenFd;
-
-int count = 0;
-Stack *my_stack;
-int pId, portNo;
+int  portNo;
+struct info_Stack *global_info;
 socklen_t len; // store size of the address
 struct sockaddr_in svrAdd, clntAdd;
-struct sockaddr_storage serverStorage;
-socklen_t addr_size;
-pid_t pid_thr[100];
 struct flock fl = {F_WRLCK, SEEK_SET, 0, 0, 0};
 int fd;
 /**
- * @brief create a new element at the top of the stack.
- *
- * @param val :Value to which the inserted element is initialized.
-                Member type value_type is the type of the elements in the container.
- * @return A reference to the top element in the stack.
- */
-Stack *newNode(char *);
-/**
  * @brief Deallocates the space previously allocated by malloc(), calloc(), aligned_alloc(), (since C11) or realloc().
+
 If ptr is a null pointer, the function does nothing.
+
 The behavior is undefined if the value of ptr does not equal a value returned earlier by malloc(), calloc(), realloc(),
  *
  * @param root : A reference to the top element in the stack.
  * @return none.
  */
-void free_stack(Stack **);
+void free_stack(struct info_Stack **);
 /**
  * @brief Colloring the text in red color
  * just for fun :)
@@ -99,25 +80,30 @@ void sig_handler(int);
 /**
  * @brief Test whether container is empty
 Returns whether the stack is empty: i.e. whether its size is zero.
+
 This member function effectively calls member empty of the underlying container object.
  *
  * @param root : root stack
  * @return true if the underlying container's size is 0, false otherwise.
  */
-int isEmpty(Stack *);
+int isEmpty(struct info_Stack **);
 /**
  * @brief Remove top element
           Removes the element on top of the stack, effectively reducing its size by one.
+
           The element removed is the latest element inserted into the stack, whose value can be retrieved by calling member stack::top.
+
           This calls the removed element's destructor.
+
           This member function effectively calls the member function pop_back of the underlying container object.
  *
  * @param root : ref root stack
  * @return A reference to the top element in the stack.
  */
-Stack *pop(Stack **);
+Stack *pop(info_Stack **);
 /**
  * @brief Inserts a new element at the top of the stack, above its current top element. The content of this new element is initialized to a copy of val.
+
     This member function effectively calls the member function push_back of the underlying container object.
  *
  * @param root : ref root stack
@@ -125,16 +111,18 @@ Stack *pop(Stack **);
                 Member type value_type is the type of the elements in the container.
  * @return none
  */
-void push(Stack **, char *);
+void push(info_Stack **, char *);
 /**
  * @brief Returns a reference to the top element in the stack.
+
     Since stacks are last-in first-out containers, the top element is the last element inserted into the stack.
+
     This member function effectively calls member back of the underlying container object.
  *
  * @param root : root stack
  * @return A reference to the top element in the stack.
  */
-char *top(Stack *);
+char *top(struct info_Stack **);
 
 /**
  * @brief Connecting the client inputes : push/pop/top
@@ -143,7 +131,8 @@ char *top(Stack *);
  * If yes -> dealing with the input in the needed way
  * @return void*
  */
-void socketThread(int clientSocket);
+void task1(int,pid_t,struct info_Stack **);
+
 /**
  * @brief Initiallize the server side
  * @return int = 1 on success, 0 on failure
