@@ -39,7 +39,7 @@ int  portNo;
 struct info_Stack *global_info;
 socklen_t len; // store size of the address
 struct sockaddr_in svrAdd, clntAdd;
-struct flock fl = {F_WRLCK, SEEK_SET, 0, 0, 0};
+struct flock fl;
 int fd;
 /**
  * @brief Deallocates the space previously allocated by malloc(), calloc(), aligned_alloc(), (since C11) or realloc().
