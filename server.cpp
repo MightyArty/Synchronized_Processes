@@ -77,7 +77,8 @@ int isEmpty(struct info_Stack **info_mmap)
 }
 Stack *pop(info_Stack **mmap_info)
 {
-    fd = open("file.txt", O_WRONLY);
+    // fd = open("file.txt", O_WRONLY);
+    fl.l_type = F_WRLCK;
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
         perror("fcntl");
@@ -102,7 +103,8 @@ Stack *pop(info_Stack **mmap_info)
 }
 void push(info_Stack **mmap_info, char *data)
 {
-    fd = open("file.txt", O_WRONLY);
+    // fd = open("file.txt", O_WRONLY);
+    fl.l_type = F_WRLCK;
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
         perror("fcntl");
@@ -135,7 +137,8 @@ void push(info_Stack **mmap_info, char *data)
 }
 char *top(struct info_Stack **info)
 {
-    fd = open("file.txt", O_WRONLY);
+    // fd = open("file.txt", O_WRONLY);
+    fl.l_type = F_WRLCK;
     if (fcntl(fd, F_SETLKW, &fl) == -1)
     {
         perror("fcntl");
@@ -270,6 +273,12 @@ void task1(int sock, pid_t process_pid, struct info_Stack **front)
 {
     while (true)
     {
+        fd = open("file.txt", O_WRONLY | O_CREAT);
+        if(fd == -1){
+            printf("error in opening file\n");
+            perror("file");
+        }
+
         char *writer = 0;
         char reader[BUFFSIZE] = {0};
         bzero(reader, BUFFSIZE);
@@ -295,7 +304,8 @@ void task1(int sock, pid_t process_pid, struct info_Stack **front)
         }
         else if (strncmp(reader, "COUNT", 5) == 0)
         {
-            fd = open("file.txt", O_WRONLY);
+            // fd = open("file.txt", O_WRONLY);
+            fl.l_type = F_WRLCK;
             if (fcntl(fd, F_SETLKW, &fl) == -1)
             {
                 perror("fcntl");
