@@ -2,6 +2,8 @@
 *.d
 temp
 test
+server
+client
 malloc_temp
 .gitignore
 # Compiled Object files
