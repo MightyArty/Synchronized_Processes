@@ -1,4 +1,6 @@
 # Synchronized Processes
+
+# By Artem Shabalin (@MightyArty) and Barak Sharabi (@bsharabi)
 Fifth assigment in Operating System course.
 
 We used </b>`fcntl()` to lock the prcesses instead of </b>`pthread`

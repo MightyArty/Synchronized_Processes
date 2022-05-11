@@ -45,6 +45,7 @@ int  portNo;
 struct info_Stack *global_info;
 socklen_t len; // store size of the address
 struct sockaddr_in svrAdd, clntAdd;
+// for locking the file
 struct flock fl;
 int fd;
 /**
@@ -71,21 +72,13 @@ void red();
  */
 void yellow();
 /**
- * @brief Colloring the text in yellow color
- * just for fun :)
- * @return none.
- */
-void yellow();
-
-/**
- * @brief Colloring the text in yellow color
+ * @brief Colloring the text in green color
  * just for fun :)
  * @return none.
  */
 void green();
-
 /**
- * @brief Colloring the text in yellow color
+ * @brief Colloring the text in blue color
  * just for fun :)
  * @return none.
  */
